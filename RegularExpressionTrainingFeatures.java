@@ -16,74 +16,106 @@ public class RegularExpressionTrainingFeatures {
 	}
 
 	public void addFeatures() throws IOException {
-		for (int i = 0; i < list.size(); i++) {
-			String inputData = list.get(i);
+		for (int i = 1; i < list.size(); i++) {
+
+			String inputData = list.get(i - 1);
 			String[] spilter = inputData.split("\t");
 			String namedEntity = spilter[3];
-			if (namedEntity.matches("^(Dr|Miss|Ms|Sir|Madam)$"))
-				list.set(i, inputData + "\tB-NamedEntity_Title");
-			else
-				list.set(i, inputData + "\tO");
+			if (i == 1)
+				list.set(0, inputData + "\tO");
+			if (namedEntity.matches("^(Dr|Miss|Ms|Sir|Madam|Mr(s)?)$")) {
+				list.set(i - 1, inputData.substring(0, inputData.length() - 2) + "\tB-NamedEntity_Title");
+				if (list.get(i).contains(".\t."))
+					list.set(i, list.get(i).substring(0, list.get(i).length() - 2) + "\tI-NamedEntity_Title");
+				else
+					list.set(i, list.get(i) + "\tO");
+			} else
+				list.set(i, list.get(i) + "\tO");
 		}
-		for (int i = 0; i < list.size(); i++) {
+		for (int i = 1; i < list.size(); i++) {
 			String inputData = list.get(i);
 			String[] spilter = inputData.split("\t");
 			String originalForm = spilter[4];
 			String namedEntity = spilter[3];
 			String chunk = spilter[6];
+			String previousData = list.get(i - 1);
+			String[] spilter1 = previousData.split("\t");
+			String term = spilter1[3];
+			String chunking;
+			if (i == 1)
+				list.set(0, list.get(0) + "\tO");
+			if (!list.get(i - 1).contains("NamedEntity_ProperName"))
+				chunking = "B-";
+			else
+				chunking = "I-";
 			if (originalForm.equals(namedEntity.trim()) && !chunk.equals("O") && spilter[5].matches("NNP\\w?")) {
-				if (namedEntity.matches("[A-Z][a-z][a-z]+") || namedEntity.matches("[A-Z][A-Z]+"))
-					list.set(i, inputData + "\t" + chunk.substring(0, 2) + "NamedEntity_ProperName");
-				else
+				if (namedEntity.matches("[A-Z][a-z][a-z]+") || namedEntity.matches("[A-Z][A-Z]+")) {
+					list.set(i, inputData + "\t" + chunking + "NamedEntity_ProperName");
+				} else
 					list.set(i, inputData + "\tO");
+			} else if (originalForm.equals("-") && previousData.contains("NamedEntity_ProperName")) {
+				list.set(i, inputData + "\tI-NamedEntity_ProperName");
+			} else if (term.equals("-") && previousData.contains("NamedEntity_ProperName")) {
+				list.set(i, inputData + "\tI-NamedEntity_ProperName");
 			} else
 				list.set(i, inputData + "\tO");
 		}
 		for (int i = 0; i < list.size(); i++) {
 			String inputData = list.get(i);
 			String[] spilter = inputData.split("\t");
-			String chunk = spilter[6];
 			String namedEntity = spilter[3];
-			if (namedEntity.matches("(16|17|18|19|20)\\d{2}(-\\d+)?") && !chunk.equals("O"))
-				list.set(i, inputData + "\t" + chunk.substring(0, 2) + "Time_Year");
-			else if (namedEntity.matches("(16|17|18|19|20)\\d{2}(-\\d+)?") && chunk.equals("O"))
-				list.set(i, inputData + "\t" + "B-Time_Year");
-			else
-				list.set(i, inputData + "\tO");
-		}
-		for (int i = 0; i < list.size(); i++) {
-			String inputData = list.get(i);
-			String[] spilter = inputData.split("\t");
-			String chunk = spilter[6];
-			String namedEntity = spilter[3];
-			if (namedEntity.matches("^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\w+?"))
-				list.set(i, inputData + "\t" + chunk.substring(0, 2) + "Time_Month");
-			else
+			if (namedEntity.matches("(16|17|18|19|20)\\d{2}(-\\d+)?")
+					&& !(list.get(i - 1).contains(",") || list.get(i - 1).contains(".")) && i != 1) {
+				if (list.get(i - 1).contains("mid") || list.get(i - 1).contains("early")
+						|| list.get(i - 1).contains("late")) {
+					list.set(i - 1, list.get(i - 1).substring(0, list.get(i - 1).length() - 2) + "\t" + "B-Time_Year");
+					list.set(i, inputData + "\t" + "I-Time_Year");
+				} else
+					list.set(i, inputData + "\t" + "B-Time_Year");
+			} else
 				list.set(i, inputData + "\tO");
 		}
 		for (int i = 0; i < list.size(); i++) {
 			String inputData = list.get(i);
 			String[] spilter = inputData.split("\t");
 			String namedEntity = spilter[3];
-			String chunk = spilter[6];
 			if (namedEntity.matches(
-					"(current(ly)?|recent(ly)?|soon(\\w*)|after|before|night|day|annual(ly)?|early|earlier|later|old|spring|autumn|summer|winter)"))
-				list.set(i, inputData + "\t" + chunk.substring(0, 2) + "Time_Phase");
-			// else if
-			// (namedEntity.matches("(year(s)?|month(s)?|day(s)?|week(s)?)"))
-			// list.set(i, inputData + "\tI-Time_Phase");
+					"^(Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|Jun(e)?|Jul(y)?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?)"))
+
+				list.set(i, inputData + "\t" + "B-Time_Month");
+
 			else
 				list.set(i, inputData + "\tO");
 		}
-
 		for (int i = 0; i < list.size(); i++) {
 			String inputData = list.get(i);
 			String[] spilter = inputData.split("\t");
 			String namedEntity = spilter[3];
-			String color = "^gray|blue|pink|red|white|black|yellow|gold|orange|dark|brown|purple|violet|silver|green|lime|jade|navy$";
-			if (namedEntity.matches(color))
-				list.set(i, inputData + "\t" + "B-Color");
+			if (namedEntity.matches(
+					"^(arid|breezy|calm|chilly|cloudy|cold|cool|damp|dark|dry|foggy|freezing|frosty|hot|humid|icy|mild|overcast|rainy|smoggy|warm|windy|sunny)"))
+				list.set(i, inputData + "\t" + "B-WeatherCondition");
+
 			else
+				list.set(i, inputData + "\tO");
+		}
+		for (int i = 0; i < list.size(); i++) {
+			String inputData = list.get(i);
+			String[] spilter = inputData.split("\t");
+			String namedEntity = spilter[3];
+			String chunk = spilter[6];
+			String chunking;
+			if (namedEntity.matches(
+					"(current(ly)?|Paleocene|recent(ly)?|soon(\\w*)|after|before|night|day|annual(ly)?|early|earlier|later|old|spring|autumn|summer|winter)")) {
+				if (i != 0) {
+					if (!list.get(i - 1).contains("Time_Phase"))
+						chunking = "B-";
+					else
+						chunking = chunk.substring(0, 2);
+				} else
+					chunking = chunk.substring(0, 2);
+
+				list.set(i, inputData + "\t" + chunking + "Time_Phase");
+			} else
 				list.set(i, inputData + "\tO");
 		}
 
@@ -107,13 +139,26 @@ public class RegularExpressionTrainingFeatures {
 			else
 				list.set(i, inputData + "\tO");
 		}
-		for (int i = 0; i < list.size(); i++) {
+		for (int i = 1; i < list.size(); i++) {
+
 			String inputData = list.get(i);
 			String[] spilter = inputData.split("\t");
-			String namedEntity = spilter[3];
-			if (namedEntity.matches("([sS]outh|[nN]orth|[wW]est|[eE]ast)(ern)?"))
-				list.set(i, inputData + "\t" + "B-Cardinal_Direction");
-			else
+			String term = spilter[3];
+			String previousData = list.get(i - 1);
+			String[] spilter1 = previousData.split("\t");
+			String namedEntity = spilter1[3];
+			if (i == 1)
+				list.set(0, previousData + "\tO");
+			if (term.matches("[A-Z][a-z][a-z]+") || term.matches("[A-Z][A-Z]+")) {
+				if ((namedEntity.toLowerCase().matches("^north\\w*") || namedEntity.toLowerCase().matches("^south\\w*")
+						|| namedEntity.toLowerCase().matches("^west\\w*")
+						|| namedEntity.toLowerCase().matches("^central\\w*")
+						|| namedEntity.toLowerCase().matches("^east\\w*")) && !namedEntity.contains("ward")) {
+					list.set(i - 1, previousData.substring(0, previousData.length() - 1) + "B-GeographicalPosition");
+					list.set(i, inputData + "\t" + "I-GeographicalPosition");
+				} else
+					list.set(i, inputData + "\tO");
+			} else
 				list.set(i, inputData + "\tO");
 		}
 
@@ -128,8 +173,10 @@ public class RegularExpressionTrainingFeatures {
 			output.append(ele + "\n");
 		}
 		String printing = output.toString();
+		// different dataset, change the path from "Training Data" to "Training
+		// Data1"
 		File file = new File(
-				"/Users/AlanHo/Documents/DissertationLibrary/NERsuite/bin/Training Data/Dictionary Features/TrainingData(dictionary).txt");
+				"/Users/AlanHo/Documents/DissertationLibrary/NERsuite/bin/Training Data1/Dictionary Features/TrainingData(dictionary).txt");
 		// creates the file
 		file.createNewFile();
 		// creates a FileWriter Object
@@ -141,7 +188,9 @@ public class RegularExpressionTrainingFeatures {
 	}
 
 	public static void main(String args[]) throws IOException {
-		String trainingDataPath = "/Users/AlanHo/Documents/DissertationLibrary/NERsuite/bin/Training Data/No Features/Training.txt";
+		// different dataset, change the path from "Training Data" to "Training
+		// Data1"
+		String trainingDataPath = "/Users/AlanHo/Documents/DissertationLibrary/NERsuite/bin/Training Data1/No Features/Training.txt";
 
 		BufferedReader br = new BufferedReader(new FileReader(trainingDataPath));
 		List<String> input = new ArrayList<String>();
